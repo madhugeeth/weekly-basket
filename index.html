@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Basket">
+<meta name="theme-color" content="#f6f7f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141a16" media="(prefers-color-scheme: dark)">
+<title>Weekly Basket</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+:root{
+  --bg:#f6f7f2; --surface:#ffffff; --line:#dfe3d9; --line-strong:#c4cabd;
+  --ink:#1c261f; --ink-2:#55605a; --ink-3:#8b948d;
+  --accent:#2f6b3a; --accent-ink:#ffffff; --accent-soft:#e3efe4;
+  --warn:#c9502b; --warn-soft:#fbe9e2;
+  --done-bg:#eef0ea; --focus:#2f6b3a;
+  --shadow:0 -6px 24px rgba(28,38,31,.08);
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141a16; --surface:#1d2620; --line:#2b362f; --line-strong:#3b483f;
+    --ink:#e8ede6; --ink-2:#a9b3ab; --ink-3:#6f7a72;
+    --accent:#7bc28a; --accent-ink:#0f1a12; --accent-soft:#213627;
+    --warn:#e8845f; --warn-soft:#3a251c;
+    --done-bg:#19211c; --focus:#7bc28a;
+    --shadow:0 -6px 24px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141a16; --surface:#1d2620; --line:#2b362f; --line-strong:#3b483f;
+  --ink:#e8ede6; --ink-2:#a9b3ab; --ink-3:#6f7a72;
+  --accent:#7bc28a; --accent-ink:#0f1a12; --accent-soft:#213627;
+  --warn:#e8845f; --warn-soft:#3a251c;
+  --done-bg:#19211c; --focus:#7bc28a;
+  --shadow:0 -6px 24px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:17px/1.4 "Atkinson Hyperlegible", "Helvetica Neue", Arial, sans-serif;
+  padding-inline:16px;
+  padding-block:calc(env(safe-area-inset-top) + 12px) 0;
+  -webkit-tap-highlight-color:transparent;
+}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-touch-callout:none;user-select:none}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:540px;margin:0 auto;padding-bottom:190px}
+
+/* header */
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px}
+h1{
+  font-family:"Bricolage Grotesque","Arial Black",Impact,sans-serif;
+  font-weight:800; font-size:2.1rem; line-height:1; letter-spacing:-.02em; margin:0;
+  text-wrap:balance;
+}
+.week{color:var(--ink-2);font-size:.95rem;margin-top:6px}
+.tools{display:flex;gap:8px;flex-shrink:0;padding-top:4px}
+.btn{
+  border:1.5px solid var(--line-strong); background:var(--surface); border-radius:999px;
+  padding:8px 14px; font-weight:700; font-size:.9rem; min-height:40px;
+}
+.btn.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.warn{color:var(--warn);border-color:var(--warn)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+.progress{display:flex;align-items:center;gap:12px;margin:14px 0 6px}
+.count{
+  font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:1.05rem;
+  font-variant-numeric:tabular-nums;white-space:nowrap
+}
+.count small{font-family:"Atkinson Hyperlegible",sans-serif;font-weight:400;color:var(--ink-2);font-size:.9rem}
+.bar{flex:1;height:8px;border-radius:999px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:999px;transition:width .3s}
+
+.confirm{
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px;
+  background:var(--warn-soft);border:1.5px solid var(--warn);border-radius:var(--r);padding:12px 14px;font-size:.95rem
+}
+.confirm p{margin:0;flex:1 1 200px}
+.confirm .btn{min-height:36px;padding:6px 12px}
+
+/* list */
+.aisle{margin-top:22px}
+.aisle h2{
+  margin:0 0 6px 4px; font-size:.78rem; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--ink-3); font-weight:700
+}
+.rows{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.row{
+  display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+  padding:13px 14px;min-height:56px;border:0;background:transparent;
+  border-bottom:1px solid var(--line);
+}
+.row:last-child{border-bottom:0}
+.row:active{background:var(--accent-soft)}
+.tick{
+  width:26px;height:26px;flex:0 0 26px;border-radius:50%;
+  border:2px solid var(--line-strong);display:grid;place-items:center;transition:background .15s,border-color .15s
+}
+.tick svg{width:15px;height:15px;opacity:0;stroke:var(--accent-ink);fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.name{flex:1;min-width:0;font-size:1.05rem;overflow-wrap:anywhere}
+.qty{color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:.95rem}
+.once{
+  font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;
+  color:var(--ink-2);border:1px solid var(--line-strong);border-radius:6px;padding:2px 6px;white-space:nowrap
+}
+.row.done .tick{background:var(--accent);border-color:var(--accent)}
+.row.done .tick svg{opacity:1}
+.row.done .name{text-decoration:line-through;color:var(--ink-3)}
+.row.done .qty{color:var(--ink-3)}
+.basket .rows{background:var(--done-bg)}
+.basket h2{color:var(--accent)}
+
+/* edit mode */
+.erow{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 14px;min-height:56px;border-bottom:1px solid var(--line)}
+.erow:last-child{border-bottom:0}
+.erow .name{font-size:1rem}
+.chip{border:1.5px solid var(--line-strong);background:transparent;border-radius:999px;padding:6px 10px;font-size:.8rem;font-weight:700;min-height:36px;white-space:nowrap}
+.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.del{border:0;background:transparent;color:var(--warn);font-weight:700;padding:6px 10px;min-height:36px;min-width:44px;font-size:1.3rem;line-height:1}
+
+.empty{color:var(--ink-2);text-align:center;padding:40px 16px;font-size:1rem}
+.hint{color:var(--ink-3);font-size:.85rem;margin:10px 4px 0;text-align:center}
+
+/* add bar */
+.add{
+  position:fixed;left:0;right:0;bottom:0;background:var(--surface);
+  border-top:1px solid var(--line);box-shadow:var(--shadow);
+  padding:12px 16px calc(env(safe-area-inset-bottom) + 12px);
+}
+.add form{max-width:540px;margin:0 auto;display:grid;gap:8px}
+.line1{display:flex;gap:8px}
+.line2{display:flex;gap:8px;align-items:center}
+.add input,.add select{
+  border:1.5px solid var(--line-strong);background:var(--bg);border-radius:12px;
+  padding:10px 12px;min-height:46px;min-width:0
+}
+.add input[name=name]{flex:1;font-size:1.05rem}
+.add input[name=qty]{width:84px}
+.add select{flex:1}
+.add .go{
+  background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;
+  font-weight:700;padding:0 18px;min-height:46px;white-space:nowrap
+}
+.add .go:disabled{opacity:.4;cursor:default}
+.staple{position:relative;display:flex;align-items:center;gap:8px;font-size:.9rem;font-weight:700;padding:6px 10px;border-radius:999px;border:1.5px solid var(--line-strong);min-height:40px;white-space:nowrap}
+.staple input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.staple:has(input:checked){background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.staple:has(input:focus-visible){outline:3px solid var(--focus);outline-offset:2px}
+
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="top">
+      <div>
+        <h1>Weekly Basket</h1>
+        <div class="week" id="week"></div>
+      </div>
+      <div class="tools">
+        <button class="btn" id="edit" type="button" aria-pressed="false">Edit</button>
+        <button class="btn warn" id="newweek" type="button">New week</button>
+      </div>
+    </div>
+    <div class="progress">
+      <div class="count" id="count"></div>
+      <div class="bar" aria-hidden="true"><i id="fill"></i></div>
+    </div>
+    <div id="confirm" hidden></div>
+  </header>
+
+  <main id="list" aria-live="polite"></main>
+  <p class="hint" id="hint" hidden>Starter list. Tap Edit to remove what you never buy.</p>
+</div>
+
+<div class="add">
+  <form id="addform" autocomplete="off">
+    <div class="line1">
+      <input id="f-name" name="name" type="text" placeholder="Add an item…" aria-label="Item name" enterkeyhint="done">
+      <input id="f-qty" name="qty" type="text" placeholder="qty" aria-label="Quantity">
+      <button class="go" id="go" type="submit" disabled>Add</button>
+    </div>
+    <div class="line2">
+      <select id="f-aisle" name="aisle" aria-label="Aisle"></select>
+      <label class="staple" for="f-staple"><input id="f-staple" name="staple" type="checkbox" checked><span>Every week</span></label>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  var AISLES=["Produce","Bakery","Dairy & Eggs","Meat & Fish","Pantry","Frozen","Household","Other"];
+  var KEY="weekly-basket-v1";
+  var uid=function(){return Math.random().toString(36).slice(2,9)};
+
+  function seed(){
+    var s=function(n,q,a,d){return {id:uid(),name:n,qty:q,aisle:a,staple:true,done:!!d,at:d?Date.now():0}};
+    var o=function(n,q,a){return {id:uid(),name:n,qty:q,aisle:a,staple:false,done:false,at:0}};
+    return {starter:true,weekStart:new Date().toISOString(),items:[
+      s("Bananas","1 bunch","Produce",true), s("Tomatoes","500 g","Produce"), s("Onions","1 kg","Produce"), s("Spinach","1 bag","Produce"),
+      s("Bread","1 loaf","Bakery",true),
+      s("Milk","2 L","Dairy & Eggs"), s("Eggs","12","Dairy & Eggs"), s("Yoghurt","4 pack","Dairy & Eggs"), s("Butter","250 g","Dairy & Eggs"),
+      s("Chicken thighs","1 kg","Meat & Fish"),
+      s("Rice","1 kg","Pantry"), s("Coffee","250 g","Pantry"),
+      s("Peas","500 g","Frozen"),
+      s("Dish soap","1","Household"), s("Toilet paper","8 rolls","Household"),
+      o("Cream","300 ml","Dairy & Eggs"), o("Birthday candles","1 pack","Other")
+    ]};
+  }
+  function load(){try{var r=localStorage.getItem(KEY);return r?JSON.parse(r):null}catch(e){return null}}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+
+  var state=load()||seed();
+  var editing=false, confirming=false;
+
+  var $=function(id){return document.getElementById(id)};
+  var list=$("list"), fill=$("fill"), count=$("count"), week=$("week"), confirmBox=$("confirm"), hint=$("hint");
+
+  var sel=$("f-aisle");
+  AISLES.forEach(function(a){var op=document.createElement("option");op.value=a;op.textContent=a;sel.appendChild(op)});
+
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+  function fmtWeek(iso){
+    var d=new Date(iso); if(isNaN(d)) return "";
+    return "Week of "+d.toLocaleDateString(undefined,{day:"numeric",month:"short"});
+  }
+
+  function render(){
+    var items=state.items, done=items.filter(function(i){return i.done}), todo=items.filter(function(i){return !i.done});
+    week.textContent=fmtWeek(state.weekStart);
+    count.innerHTML=done.length+"<small> of "+items.length+" in the basket</small>";
+    fill.style.width=(items.length?Math.round(done.length/items.length*100):0)+"%";
+    hint.hidden=!state.starter;
+    $("edit").textContent=editing?"Done":"Edit";
+    $("edit").className="btn"+(editing?" on":"");
+    $("edit").setAttribute("aria-pressed",editing);
+
+    var html="";
+    if(!items.length){ html='<p class="empty">Nothing on the list. Add your regulars below.</p>'; }
+
+    if(editing){
+      AISLES.forEach(function(a){
+        var g=items.filter(function(i){return i.aisle===a});
+        if(!g.length) return;
+        html+='<section class="aisle"><h2>'+esc(a)+'</h2><div class="rows">';
+        g.forEach(function(i){
+          html+='<div class="erow"><span class="name">'+esc(i.name)+(i.qty?' <span class="qty">'+esc(i.qty)+'</span>':'')+'</span>'
+            +'<button type="button" class="chip'+(i.staple?' on':'')+'" data-staple="'+i.id+'" aria-pressed="'+i.staple+'">'+(i.staple?"Every week":"Once")+'</button>'
+            +'<button type="button" class="del" data-del="'+i.id+'" aria-label="Remove '+esc(i.name)+'">&times;</button></div>';
+        });
+        html+='</div></section>';
+      });
+    } else {
+      AISLES.forEach(function(a){
+        var g=todo.filter(function(i){return i.aisle===a});
+        if(!g.length) return;
+        html+='<section class="aisle"><h2>'+esc(a)+'</h2><div class="rows">';
+        g.forEach(function(i){html+=row(i)});
+        html+='</div></section>';
+      });
+      if(done.length){
+        done.sort(function(a,b){return (b.at||0)-(a.at||0)});
+        html+='<section class="aisle basket"><h2>In the basket &middot; '+done.length+'</h2><div class="rows">';
+        done.forEach(function(i){html+=row(i)});
+        html+='</div></section>';
+      }
+    }
+    list.innerHTML=html;
+  }
+  function row(i){
+    return '<button type="button" class="row'+(i.done?' done':'')+'" data-toggle="'+i.id+'" aria-pressed="'+i.done+'">'
+      +'<span class="tick"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>'
+      +'<span class="name">'+esc(i.name)+'</span>'
+      +(i.staple?'':'<span class="once">once</span>')
+      +(i.qty?'<span class="qty">'+esc(i.qty)+'</span>':'')
+      +'</button>';
+  }
+
+  list.addEventListener("click",function(e){
+    var b=e.target.closest("button"); if(!b) return;
+    var id=b.dataset.toggle||b.dataset.staple||b.dataset.del;
+    var it=state.items.find(function(i){return i.id===id}); if(!it) return;
+    if(b.dataset.toggle){ it.done=!it.done; it.at=Date.now(); }
+    else if(b.dataset.staple){ it.staple=!it.staple; }
+    else if(b.dataset.del){ state.items=state.items.filter(function(i){return i!==it}); }
+    state.starter=false; save(); render();
+  });
+
+  $("edit").addEventListener("click",function(){editing=!editing;render()});
+
+  $("newweek").addEventListener("click",function(){
+    confirming=!confirming;
+    confirmBox.hidden=!confirming;
+    if(!confirming) return;
+    var once=state.items.filter(function(i){return !i.staple&&i.done}).length;
+    confirmBox.className="confirm";
+    confirmBox.innerHTML='<p>Untick everything'+(once?' and drop '+once+' bought one-off item'+(once>1?'s':''):'')+'? Unbought one-offs carry over.</p>'
+      +'<button type="button" class="btn primary" id="yes">Start new week</button><button type="button" class="btn" id="no">Cancel</button>';
+    $("no").onclick=function(){confirming=false;confirmBox.hidden=true};
+    $("yes").onclick=function(){
+      state.items=state.items.filter(function(i){return i.staple||!i.done});
+      state.items.forEach(function(i){i.done=false;i.at=0});
+      state.weekStart=new Date().toISOString(); state.starter=false;
+      confirming=false; confirmBox.hidden=true; save(); render();
+      window.scrollTo({top:0});
+    };
+  });
+
+  var form=$("addform"), nameIn=$("f-name"), qtyIn=$("f-qty"), go=$("go");
+  nameIn.addEventListener("input",function(){go.disabled=!nameIn.value.trim()});
+  form.addEventListener("submit",function(e){
+    e.preventDefault();
+    var n=nameIn.value.trim(); if(!n) return;
+    state.items.push({id:uid(),name:n,qty:qtyIn.value.trim(),aisle:sel.value,staple:$("f-staple").checked,done:false,at:0});
+    state.starter=false; save(); render();
+    nameIn.value=""; qtyIn.value=""; go.disabled=true; nameIn.focus();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
