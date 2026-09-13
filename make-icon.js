@@ -71,7 +71,7 @@ function draw(size) {
     return BG.map((c, k) => Math.round(c + (FG[k] - c) * a));
   };
 }
-for (const size of [180, 512]) {
+for (const size of [180, 192, 512]) {
   fs.writeFileSync(`icon-${size}.png`, png(size, draw(size)));
   console.log(`icon-${size}.png`);
 }
