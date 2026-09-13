@@ -82,11 +82,18 @@ h1{
 .bar{flex:1;height:8px;border-radius:999px;background:var(--line);overflow:hidden}
 .bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:999px;transition:width .3s}
 
+.sync{display:flex;align-items:center;gap:10px;font-size:.85rem;color:var(--ink-2);min-height:28px;flex-wrap:wrap}
+.sync .dot{width:9px;height:9px;border-radius:50%;background:var(--ink-3);flex:0 0 9px}
+.sync.on .dot{background:var(--accent)}
+.sync.off .dot{background:var(--warn)}
+.sync .link{border:0;background:none;color:var(--accent);font-weight:700;padding:4px 0;text-decoration:underline;text-underline-offset:3px}
+
 .confirm{
   display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px;
   background:var(--warn-soft);border:1.5px solid var(--warn);border-radius:var(--r);padding:12px 14px;font-size:.95rem
 }
-.confirm p{margin:0;flex:1 1 200px}
+.confirm.note{background:var(--accent-soft);border-color:var(--accent)}
+.confirm p{margin:0;flex:1 1 200px;overflow-wrap:anywhere}
 .confirm .btn{min-height:36px;padding:6px 12px}
 
 /* list */
@@ -178,6 +185,7 @@ h1{
       <div class="count" id="count"></div>
       <div class="bar" aria-hidden="true"><i id="fill"></i></div>
     </div>
+    <div class="sync" id="sync" hidden></div>
     <div id="confirm" hidden></div>
   </header>
 
@@ -199,15 +207,25 @@ h1{
   </form>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="config.js"></script>
 <script>
 (function(){
   var AISLES=["Produce","Bakery","Dairy & Eggs","Meat & Fish","Pantry","Frozen","Household","Other"];
   var KEY="weekly-basket-v1";
   var uid=function(){return Math.random().toString(36).slice(2,9)};
+  var listUid=function(){
+    var a="abcdefghijklmnopqrstuvwxyz0123456789", s="";
+    var r=new Uint8Array(20); (window.crypto||{}).getRandomValues ? crypto.getRandomValues(r) : r.forEach(function(_,i){r[i]=Math.random()*256});
+    for(var i=0;i<20;i++) s+=a[r[i]%a.length];
+    return s;
+  };
 
   function seed(){
-    var s=function(n,q,a,d){return {id:uid(),name:n,qty:q,aisle:a,staple:true,done:!!d,at:d?Date.now():0}};
-    var o=function(n,q,a){return {id:uid(),name:n,qty:q,aisle:a,staple:false,done:false,at:0}};
+    var n=0, base=Date.now()-1e6;
+    var s=function(nm,q,a,d){return {id:uid(),name:nm,qty:q,aisle:a,staple:true,done:!!d,at:d?Date.now():0,order:base+(n++)}};
+    var o=function(nm,q,a){return {id:uid(),name:nm,qty:q,aisle:a,staple:false,done:false,at:0,order:base+(n++)}};
     return {starter:true,weekStart:new Date().toISOString(),items:[
       s("Bananas","1 bunch","Produce",true), s("Tomatoes","500 g","Produce"), s("Onions","1 kg","Produce"), s("Spinach","1 bag","Produce"),
       s("Bread","1 loaf","Bakery",true),
@@ -223,10 +241,11 @@ h1{
   function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
 
   var state=load()||seed();
+  state.items.forEach(function(i,k){if(i.order==null) i.order=k});
   var editing=false, confirming=false;
 
   var $=function(id){return document.getElementById(id)};
-  var list=$("list"), fill=$("fill"), count=$("count"), week=$("week"), confirmBox=$("confirm"), hint=$("hint");
+  var list=$("list"), fill=$("fill"), count=$("count"), week=$("week"), confirmBox=$("confirm"), hint=$("hint"), syncEl=$("sync");
 
   var sel=$("f-aisle");
   AISLES.forEach(function(a){var op=document.createElement("option");op.value=a;op.textContent=a;sel.appendChild(op)});
@@ -236,7 +255,85 @@ h1{
     var d=new Date(iso); if(isNaN(d)) return "";
     return "Week of "+d.toLocaleDateString(undefined,{day:"numeric",month:"short"});
   }
+  function note(html, kind){
+    confirming=false;
+    confirmBox.className="confirm "+(kind||"note");
+    confirmBox.innerHTML='<p>'+html+'</p><button type="button" class="btn" id="note-ok">OK</button>';
+    confirmBox.hidden=false;
+    $("note-ok").onclick=function(){confirmBox.hidden=true};
+  }
 
+  /* ---------- sync (Firebase Realtime Database), optional ---------- */
+  var sync={on:false, ref:null, connected:false};
+  function shareUrl(){return location.origin+location.pathname+"?list="+state.listId}
+  function renderSync(){
+    if(!sync.on){syncEl.hidden=true;return}
+    syncEl.hidden=false;
+    syncEl.className="sync "+(sync.connected?"on":"off");
+    syncEl.innerHTML='<span class="dot"></span><span>'+(sync.connected?"Synced":"Offline, will sync when back online")+'</span>'
+      +'<button type="button" class="link" id="share">Share list</button>';
+    $("share").onclick=function(){
+      var url=shareUrl();
+      if(navigator.share){ navigator.share({title:"Weekly Basket",text:"Our shopping list",url:url}).catch(function(){}); }
+      else if(navigator.clipboard){ navigator.clipboard.writeText(url).then(function(){note("Link copied. Send it to the other phone:<br><small>"+esc(url)+"</small>")}); }
+      else note("Send this link to the other phone:<br><small>"+esc(url)+"</small>");
+    };
+  }
+  function itemsFromRemote(val){
+    var arr=[]; if(val&&val.items){ Object.keys(val.items).forEach(function(k){var it=val.items[k]; if(it&&it.name){it.id=k; arr.push(it)}}); }
+    arr.sort(function(a,b){return (a.order||0)-(b.order||0)});
+    return arr;
+  }
+  function startSync(){
+    var cfg=window.FIREBASE_CONFIG;
+    if(!cfg||!cfg.databaseURL||!window.firebase) return;
+    var joined=null;
+    try{
+      var p=new URLSearchParams(location.search).get("list");
+      if(p&&/^[a-z0-9]{12,40}$/.test(p)){ joined=(p!==state.listId); state.listId=p; history.replaceState(null,"",location.pathname); }
+    }catch(e){}
+    if(!state.listId){ state.listId=listUid(); }
+    save();
+    try{ firebase.initializeApp(cfg); }catch(e){ console.warn("Firebase init failed",e); return; }
+    var db=firebase.database();
+    sync.on=true; sync.ref=db.ref("lists/"+state.listId);
+    db.ref(".info/connected").on("value",function(s){sync.connected=!!s.val();renderSync()});
+    var first=true;
+    sync.ref.on("value",function(snap){
+      var val=snap.val();
+      if(first){
+        first=false;
+        if(!val||!val.items){
+          if(joined){ state.items=[]; }
+          else { var up={weekStart:state.weekStart,items:{}}; state.items.forEach(function(i){up.items[i.id]=strip(i)}); sync.ref.set(up); }
+          render(); return;
+        }
+        if(joined) note("Joined the shared list. Both phones now see the same items.");
+      }
+      if(val){
+        state.items=itemsFromRemote(val);
+        if(val.weekStart) state.weekStart=val.weekStart;
+        state.starter=false;
+      }
+      save(); render();
+    });
+    renderSync();
+  }
+  function strip(i){return {name:i.name,qty:i.qty||"",aisle:i.aisle,staple:!!i.staple,done:!!i.done,at:i.at||0,order:i.order||0}}
+  var remote={
+    set:function(it){ if(sync.on) sync.ref.child("items/"+it.id).set(strip(it)); },
+    patch:function(it,fields){ if(sync.on) sync.ref.child("items/"+it.id).update(fields); },
+    remove:function(it){ if(sync.on) sync.ref.child("items/"+it.id).remove(); },
+    newWeek:function(removed,kept,weekStart){
+      if(!sync.on) return;
+      var up={weekStart:weekStart};
+      removed.forEach(function(i){up["items/"+i.id]=null});
+      kept.forEach(function(i){up["items/"+i.id+"/done"]=false;up["items/"+i.id+"/at"]=0});
+      sync.ref.update(up);
+    }
+  };
+
+  /* ---------- render ---------- */
   function render(){
     var items=state.items, done=items.filter(function(i){return i.done}), todo=items.filter(function(i){return !i.done});
     week.textContent=fmtWeek(state.weekStart);
@@ -288,13 +385,14 @@ h1{
       +'</button>';
   }
 
+  /* ---------- actions ---------- */
   list.addEventListener("click",function(e){
     var b=e.target.closest("button"); if(!b) return;
     var id=b.dataset.toggle||b.dataset.staple||b.dataset.del;
     var it=state.items.find(function(i){return i.id===id}); if(!it) return;
-    if(b.dataset.toggle){ it.done=!it.done; it.at=Date.now(); }
-    else if(b.dataset.staple){ it.staple=!it.staple; }
-    else if(b.dataset.del){ state.items=state.items.filter(function(i){return i!==it}); }
+    if(b.dataset.toggle){ it.done=!it.done; it.at=Date.now(); remote.patch(it,{done:it.done,at:it.at}); }
+    else if(b.dataset.staple){ it.staple=!it.staple; remote.patch(it,{staple:it.staple}); }
+    else if(b.dataset.del){ state.items=state.items.filter(function(i){return i!==it}); remote.remove(it); }
     state.starter=false; save(); render();
   });
 
@@ -310,9 +408,11 @@ h1{
       +'<button type="button" class="btn primary" id="yes">Start new week</button><button type="button" class="btn" id="no">Cancel</button>';
     $("no").onclick=function(){confirming=false;confirmBox.hidden=true};
     $("yes").onclick=function(){
+      var removed=state.items.filter(function(i){return !i.staple&&i.done});
       state.items=state.items.filter(function(i){return i.staple||!i.done});
       state.items.forEach(function(i){i.done=false;i.at=0});
       state.weekStart=new Date().toISOString(); state.starter=false;
+      remote.newWeek(removed,state.items,state.weekStart);
       confirming=false; confirmBox.hidden=true; save(); render();
       window.scrollTo({top:0});
     };
@@ -323,12 +423,14 @@ h1{
   form.addEventListener("submit",function(e){
     e.preventDefault();
     var n=nameIn.value.trim(); if(!n) return;
-    state.items.push({id:uid(),name:n,qty:qtyIn.value.trim(),aisle:sel.value,staple:$("f-staple").checked,done:false,at:0});
+    var it={id:uid(),name:n,qty:qtyIn.value.trim(),aisle:sel.value,staple:$("f-staple").checked,done:false,at:0,order:Date.now()};
+    state.items.push(it); remote.set(it);
     state.starter=false; save(); render();
     nameIn.value=""; qtyIn.value=""; go.disabled=true; nameIn.focus();
   });
 
   render();
+  startSync();
 })();
 </script>
 </body>

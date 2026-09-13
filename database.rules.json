@@ -1,0 +1,27 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "lists": {
+      "$listId": {
+        ".read": "$listId.matches(/^[a-z0-9]{12,40}$/)",
+        ".write": "$listId.matches(/^[a-z0-9]{12,40}$/)",
+        "weekStart": { ".validate": "newData.isString()" },
+        "items": {
+          "$itemId": {
+            ".validate": "newData.hasChildren(['name'])",
+            "name":   { ".validate": "newData.isString() && newData.val().length <= 120" },
+            "qty":    { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "aisle":  { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "staple": { ".validate": "newData.isBoolean()" },
+            "done":   { ".validate": "newData.isBoolean()" },
+            "at":     { ".validate": "newData.isNumber()" },
+            "order":  { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}
